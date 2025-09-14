@@ -1,9 +1,9 @@
 import argparse, socket, time, csv, logging
-from scapy.all import rdpcap, DNS, UDP, PcapReader
+from scapy.all import DNS, PcapReader
 from datetime import datetime
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
-    
+
 def run_client(pcap_path, server_ip, server_port, out_csv):
     dns_pkts = []
     for pkt in PcapReader(pcap_path):
@@ -18,11 +18,10 @@ def run_client(pcap_path, server_ip, server_port, out_csv):
         return
     
     # Use UDP to match the server's protocol (8-byte header + raw DNS packet)
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.settimeout(3.0)
+    client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     logging.info(f"Using UDP to communicate with server at {server_ip}:{server_port}")
 
-    results_data = [] # (header, domain, ips)
+    results_data = [] # (header, domain, ip)
 
     for i, pkt in enumerate(dns_pkts):
         dns_bytes = bytes(pkt[DNS])
@@ -36,40 +35,19 @@ def run_client(pcap_path, server_ip, server_port, out_csv):
         header_bytes = header.encode('ascii')
         payload = header_bytes + dns_bytes
 
-        sock.sendto(payload, (server_ip, server_port))
+        client.sendto(payload, (server_ip, server_port))
         logging.info(f"Sent query txid={txid} header={header} domain={domain}")
 
-        # Receive raw DNS response bytes
-        try:
-            resp_bytes, _ = sock.recvfrom(65535)
-        except socket.timeout:
-            logging.warning(f"Timeout waiting for response for domain {domain} (txid={txid})")
+        # Receive plain text response bytes
+        resp_bytes, _ = client.recvfrom(65535)
+        resp_text = resp_bytes.decode('utf-8', errors='ignore').strip()
+        parts = resp_text.split('|')
+        if len(parts) != 3:
+            logging.warning(f"Unexpected response format for domain {domain}: {resp_text}")
             continue
-
-        # Parse DNS response and extract resolved IP
-        try:
-            dns_resp = DNS(resp_bytes)
-            resolved_ip = None
-            if dns_resp.an:
-                # Collect chained answers
-                answers = []
-                ans = dns_resp.an
-                while ans is not None:
-                    answers.append(ans)
-                    ans = ans.payload if hasattr(ans, 'payload') else None
-                for rr in answers:
-                    # type 1 == A record
-                    if getattr(rr, 'type', None) == 1 and hasattr(rr, 'rdata'):
-                        resolved_ip = rr.rdata
-                        break
-            if not resolved_ip:
-                logging.warning(f"No A record found in response for domain {domain} (txid={txid})")
-                continue
-
-            results_data.append((header, domain, str(resolved_ip)))
-            logging.info(f"Resolved {domain} -> {resolved_ip}")
-        except Exception as e:
-            logging.error(f"Failed to parse DNS response for {domain}: {e}")
+        r_header, r_domain, r_ip = parts
+        results_data.append((r_header, r_domain, r_ip))
+        logging.info(f"Resolved {r_domain} -> {r_ip}")
     
     logging.info("All queries sent. Waiting for any remaining responses...")
 
@@ -79,7 +57,7 @@ def run_client(pcap_path, server_ip, server_port, out_csv):
         writer.writerows(results_data)
     logging.info(f"Results written to {out_csv}")
 
-    sock.close()
+    client.close()
 
 
 

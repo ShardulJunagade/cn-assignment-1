@@ -1,5 +1,5 @@
 import argparse, socket, json, logging
-from scapy.all import DNS, DNSRR
+from scapy.all import DNS
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
 
@@ -19,10 +19,8 @@ def load_rules_from_json(path):
 def resolve_ip_address(rules, header):
     """Selects an IP address based on the custom header and rules."""
     try:
-        # Extract Hour, Minute, Second, and ID from the 8-byte header 'HHMMSSID'
         hour = int(header[0:2])
         session_id = int(header[6:8])
-
         time_rules = rules.get("timestamp_rules", {}).get("time_based_routing", {})        
         if 4 <= hour <= 11:
             slot_cfg = time_rules.get("morning")
@@ -39,9 +37,9 @@ def resolve_ip_address(rules, header):
         
         # Make sure the calculated index is valid
         if not (0 <= index < len(ip_pool)):
-             logging.warning(f"Calculated index {index} is out of bounds. Defaulting to index 0.")
-             index = 0
-        
+            logging.warning(f"Calculated index {index} is out of bounds. Defaulting to index 0.")
+            index = 0
+
         return ip_pool[index]
 
     except (ValueError, TypeError, KeyError) as e:
@@ -49,14 +47,8 @@ def resolve_ip_address(rules, header):
         return rules.get("ip_pool", DEFAULT_IP_POOL)[0]
 
 
-
 def handle_packet(data, client_addr, sock, rules):
     """Parses a received packet and sends a DNS response."""
-    # The first 8 bytes are our custom header.
-    if len(data) < 8:
-        logging.warning(f"Received a packet too short to contain a header from {client_addr}")
-        return
-    
     header = data[:8].decode('ascii', errors='ignore')
     dns_bytes = data[8:]
     
@@ -70,18 +62,10 @@ def handle_packet(data, client_addr, sock, rules):
 
         resolved_ip = resolve_ip_address(rules, header)
 
-        # Build DNS response using the original qname bytes
-        dns_response = DNS(
-            id=dns_query.id,    # Use the same transaction ID
-            qr=1,               # This is a response
-            aa=1,               # Authoritative answer
-            qd=dns_query.qd,    # Original question
-            an=DNSRR(rrname=qname_bytes, type='A', rclass='IN', ttl=300, rdata=resolved_ip)
-        )
-
-        # Send raw DNS response bytes
-        sock.sendto(bytes(dns_response), client_addr)
-        logging.info(f"Responded to {client_addr}: Header={header}, Domain={qname_str.rstrip('.')} -> Resolved IP={resolved_ip}")
+        # Send a plain text response instead of a raw DNS packet: "header|domain|ip"
+        response = f"{header}|{qname_str.rstrip('.')}|{resolved_ip}"
+        sock.sendto(response.encode('utf-8'), client_addr)
+        logging.info(f"Responded to {client_addr}: {response}")
 
     except Exception as e:
         logging.error(f"Failed to process packet from {client_addr}: {e}")
@@ -100,10 +84,10 @@ def run_server(host, port, rules_path):
     logging.info(f"DNS server listening on {host}:{port}")
 
     while True:
-        data, addr = server.recvfrom(65535) # Max packet size
+        data, addr = server.recvfrom(65535)
         handle_packet(data, addr, server, rules)
 
-    server.close()
+    # server.close()
 
 
 
