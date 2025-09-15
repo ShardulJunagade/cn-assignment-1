@@ -6,11 +6,15 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(mes
 
 def run_client(pcap_path, server_ip, server_port, out_csv):
     dns_pkts = []
+    counter=0
     for pkt in PcapReader(pcap_path):
         if (pkt.haslayer(DNS) and pkt[DNS].qr == 0):
             qname = pkt[DNS].qd.qname.decode()
             if not qname.endswith(".local.") and not qname.startswith("_"):
                 dns_pkts.append(pkt)
+        counter += 1
+        if counter % 20000 == 0:
+            logging.info(f"Processed {counter} packets, found {len(dns_pkts)} DNS queries so far...")
 
     logging.info(f"Found {len(dns_pkts)} DNS query packets in {pcap_path}")
     if not dns_pkts:
