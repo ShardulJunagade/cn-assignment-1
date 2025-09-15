@@ -13,46 +13,46 @@ PCAP file chosen: `3.pcap`
 ## Installation and Setup Instructions
 1. Ensure Python 3.x is installed on your system.
 2. Create a virtual environment:
-    ```powershell
-    py -3 -m venv .venv
+    ```bash
+    python -m venv .venv
     ```
 3. Activate the virtual environment:
     - On Windows:
-    ```powershell
-    .venv\Scripts\Activate.ps1
-    ```
+        ```bash
+        .venv\Scripts\Activate.ps1
+        ```
     - On macOS/Linux:
         ```bash
         source .venv/bin/activate
         ```
 4. Install required packages:
-        ```powershell
-        pip install -r requirements.txt
-        ```
+    ```bash
+    pip install -r requirements.txt
+    ```
 
 ## How to Run
 
 1) Original Scapy-based implementation:
 
     - Start server:
-        ```powershell
+        ```bash
         python server_scapy.py --host 0.0.0.0 --port 53535 --rules .\rules.json
         ```
 
     - Run client:
-        ```powershell
+        ```bash
         python client_scapy.py --pcap .\3.pcap --server-ip 127.0.0.1 --server-port 53535 --out-csv scapy_dns_report.csv
         ```
 
 2) dpkt-based implementation, which directly parses the PCAP and DNS:
 
     - Start server:
-        ```powershell
+        ```bash
         python server_dpkt.py --host 0.0.0.0 --port 53535 --rules .\rules.json
         ```
 
     - Run client:
-        ```powershell
+        ```bash
         python client_dpkt.py --pcap .\3.pcap --server-ip 127.0.0.1 --server-port 53535 --out-csv dpkt_dns_report.csv
         ```
 
