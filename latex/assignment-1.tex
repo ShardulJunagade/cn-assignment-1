@@ -1,0 +1,211 @@
+\documentclass[10pt,a4paper]{report}
+
+% Packages
+\usepackage[a4paper,margin=0.9in]{geometry} % reduce margins
+\usepackage{setspace}
+\usepackage{titlesec}
+\usepackage{hyperref}
+\usepackage{graphicx} % for images
+\usepackage{caption}  % better caption control
+\usepackage{lipsum}   % for dummy text (remove later)
+\usepackage{enumitem}
+\usepackage{amssymb} % for \checkmark symbol
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhead[L]{CS202 Lab Assignment 1 Report}
+\fancyhead[R]{Shardul Junagade}
+\fancyfoot[C]{\thepage}
+\usepackage{xcolor}
+\newcommand{\command}[1]{\texttt{\textcolor{blue}{#1}}}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.6em}
+
+% Remove figure numbering
+\captionsetup[figure]{labelformat=empty}
+
+% Customize section/chapter fonts
+\titleformat{\chapter}[block]{\huge\bfseries}{}{0pt}{}
+\titleformat{\section}{\Large\bfseries}{\thesection}{0.4em}{} 
+\titleformat{\subsection}{\large\bfseries}{\thesubsection}{0.4em}{} 
+
+% Define custom command for images with optional caption
+\usepackage{xparse}
+\NewDocumentCommand{\insertimage}{O{0.8\textwidth} m o}{%
+    \begin{center}
+        \includegraphics[width=#1]{#2}%
+        \IfValueT{#3}{\\\captionof{figure}{#3}}%
+    \end{center}
+}
+
+% Front Page Info
+\title{\Huge Assignment-1 \\[0.5cm] \LARGE CS 331: Computer Networks}
+% \author{\Large Shardul Junagade (23110297) \\[0.1cm] \Large Rishabh Jogani (23110276) \\[0.2cm] \Large Repository: \href{https://github.com/ShardulJunagade/cn-assignment-1}{cn-assignment-1}}
+\author{
+    \begin{tabular}{c c}
+        \Large Shardul Junagade & \Large Rishabh Jogani \\
+        \large (23110297) & \large (23110276) \\
+    \end{tabular} \\[0.7cm]
+    \Large Repository: \href{https://github.com/ShardulJunagade/cn-assignment-1}{cn-assignment-1}
+}
+\date{\large \today}
+
+\begin{document}
+
+% Front Page
+\maketitle
+\newpage
+
+% Table of Contents
+\tableofcontents
+\newpage
+
+% ---------- Example Content ----------
+
+\chapter{Task 1: Custom DNS Resolver}
+\section{Aim}
+The aim of this task was to implement a custom DNS resolver system using both the Scapy and dpkt Python libraries. The objective was to parse DNS query packets from a given PCAP file, add a custom header, send them to a server for resolution based on predefined rules, and log the resolved IP addresses for reporting. This task helped us understand packet parsing, custom protocol design, and time-based routing logic.
+
+\section{Introduction}
+In this assignment, we developed a client-server system to process DNS queries captured in a PCAP file. The client parsed DNS query packets, prepended a custom header containing a timestamp and sequence ID, and sent these packets to a custom server. The server extracted the header, applied time-based routing rules to select an IP address, and responded with the resolved result. We implemented the solution using two different packet processing libraries: Scapy and dpkt, to demonstrate versatility and robustness.
+
+The custom header format was \texttt{HHMMSSID}, where \texttt{HH} is the hour, \texttt{MM} is the minute, \texttt{SS} is the second, and \texttt{ID} is the sequence number of the DNS query. The server used this header to determine the time slot and select an IP address from a pool, as specified in a JSON rules file.
+
+\section{Procedure}
+
+\subsection{PCAP Parsing and DNS Query Extraction}
+We first parsed the provided PCAP file to extract DNS query packets. For this, we implemented two separate clients:
+\begin{itemize}
+    \item \textbf{Scapy-based client (\texttt{client\_scapy.py}):}
+    Used Scapy's \texttt{PcapReader} and DNS layers to filter and extract DNS queries. Example code snippet:
+    \begin{verbatim}
+for pkt in PcapReader(pcap_path):
+    if (pkt.haslayer(DNS) and pkt[DNS].qr == 0):
+        qname = pkt[DNS].qd.qname.decode()
+        if not qname.endswith(".local.") and not qname.startswith("_"):
+            dns_pkts.append(pkt)
+    \end{verbatim}
+    \item \textbf{dpkt-based client (\texttt{client\_dpkt.py}):}
+    Used dpkt's PCAP and DNS parsing utilities:
+    \begin{verbatim}
+with open(pcap_path, "rb") as f:
+    pcap = dpkt.pcap.Reader(f)
+    for ts, buf in pcap:
+        eth = dpkt.ethernet.Ethernet(buf)
+        ip = eth.data
+        udp = ip.data
+        if isinstance(udp, dpkt.udp.UDP) and udp.dport == 53:
+            dns = dpkt.dns.DNS(udp.data)
+            ...
+    \end{verbatim}
+\end{itemize}
+
+% Add output image of terminal running the client here
+% \insertimage[0.8\textwidth]{../images/assignment-1/client_terminal.png}[Client terminal output]
+
+\subsection{Custom Header Construction}
+For each DNS query, we constructed an 8-byte custom header in the format \texttt{HHMMSSID}, where:
+\begin{itemize}
+    \item \texttt{HH}: Hour (24-hour format)
+    \item \texttt{MM}: Minute
+    \item \texttt{SS}: Second
+    \item \texttt{ID}: Sequence number of the DNS query (starting from 00)
+\end{itemize}
+This header was prepended to the raw DNS packet bytes. Example (Scapy):
+\begin{verbatim}
+hhmmss = datetime.now().strftime("%H%M%S")
+sid = f"{i:02d}"
+header = hhmmss + sid
+payload = header.encode('ascii') + dns_bytes
+\end{verbatim}
+
+\subsection{Client-Server Communication}
+The client sent the modified packet (header + DNS query) to the server over UDP. The server was implemented in two variants:
+\begin{itemize}
+    \item \textbf{Scapy-based server (\texttt{server\_scapy.py}):} Used Scapy to parse incoming DNS queries and extract the domain name.
+    \item \textbf{dpkt-based server (\texttt{server\_dpkt.py}):} Used dpkt for the same purpose.
+\end{itemize}
+Example server code (Scapy):
+\begin{verbatim}
+header = data[:8].decode('ascii', errors='ignore')
+dns_bytes = data[8:]
+dns_query = DNS(dns_bytes)
+qname_bytes = dns_query.qd.qname if dns_query.qd else b""
+qname_str = qname_bytes.decode(errors='ignore')
+\end{verbatim}
+
+% Add output image of terminal running the server here
+% \insertimage[0.8\textwidth]{../images/assignment-1/server_terminal.png}[Server terminal output]
+
+\subsection{Server-side IP Resolution}
+Upon receiving a packet, the server extracted the custom header and used the hour and sequence ID to select an IP address from a pool, according to time-based rules defined in a JSON file (\texttt{rules.json}). The rules specified different IP pool ranges and hash functions for morning, afternoon, and night slots. The logic was as follows:
+\begin{verbatim}
+hour = int(header[0:2])
+session_id = int(header[6:8])
+if 4 <= hour <= 11:
+    slot_cfg = time_rules.get("morning")
+elif 12 <= hour <= 19:
+    slot_cfg = time_rules.get("afternoon")
+else:
+    slot_cfg = time_rules.get("night")
+index = ip_pool_start + (session_id % hash_mod)
+\end{verbatim}
+The rules and pool configuration were as described in the assignment and the provided rules documentation.
+
+\subsection{Response and Logging}
+The server responded with a plain text message in the format \texttt{header|domain|resolved\_ip}. The client received this response and logged the results in a CSV file for reporting. Both implementations (Scapy and dpkt) followed this protocol.
+
+
+\section{Results}
+
+The system successfully parsed DNS queries from the PCAP file, sent them to the server with the custom header, and received resolved IP addresses based on the specified rules. The results were saved in CSV files (\texttt{dpkt\_dns\_report.csv} and \texttt{scapy\_dns\_report.csv}), each containing the custom header, domain name, and resolved IP address for every query.
+
+\begin{itemize}
+    \item Both Scapy and dpkt implementations produced consistent results, demonstrating the correctness of the approach.
+    \item The server correctly applied time-based routing rules and handled edge cases (e.g., out-of-bounds indices).
+    \item The code was modular, well-commented, and robust against malformed packets.
+\end{itemize}
+
+\textbf{Sample output (CSV):}
+\begin{table}[htbp]
+\centering
+\caption{DNS Resolution Results}
+\begin{tabular}{|c|l|c|}
+\hline
+\textbf{Custom header value} & \textbf{Domain name} & \textbf{Resolved IP address} \\
+\textbf{(HHMMSSID)} & & \\
+\hline
+20464700 & netflix.com & 192.168.1.11 \\
+20464701 & linkedin.com & 192.168.1.12 \\
+20464702 & example.com & 192.168.1.13 \\
+20464703 & google.com & 192.168.1.14 \\
+20464704 & facebook.com & 192.168.1.15 \\
+20464705 & amazon.com & 192.168.1.11 \\
+\hline
+\end{tabular}
+\label{tab:dns_resolution}
+\end{table}
+
+\textbf{DNS Resolution Rule Example:}
+\begin{itemize}
+    \item If the hour is 20 (night slot), the pool start is 10, and hash mod is 5. For ID 00: $10 + (00 \% 5) = 10$ $\rightarrow$ 192.168.1.11
+    \item For ID 01: $10 + (01 \% 5) = 11$ $\rightarrow$ 192.168.1.12
+    \item For ID 04: $10 + (04 \% 5) = 14$ $\rightarrow$ 192.168.1.15
+\end{itemize}
+
+% Add output image of the generated CSV/report here
+% \insertimage[0.8\textwidth]{../images/assignment-1/report_csv.png}[Sample CSV output]
+
+\textbf{Repository:} \url{https://github.com/ShardulJunagade/cn-assignment-1}
+
+\chapter{Task 2: Pydriller Tool}
+\section{Aim}
+\lipsum[5]
+
+\section{References}
+\begin{enumerate}[label={[\arabic*]}, itemsep=0.05em, topsep=0pt]
+    \item \href{https://git-scm.com/doc}{Git Documentation}
+    \item \href{https://docs.github.com/en}{GitHub Guides}
+\end{enumerate}
+
+\end{document}

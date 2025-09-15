@@ -1,5 +1,47 @@
 3.pcap
 
+# Ignore LaTeX auxiliary and temporary files
+*.aux
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.out
+*.toc
+*.bbl
+*.blg
+*.lof
+*.lot
+*.nav
+*.snm
+*.vrb
+*.idx
+*.ilg
+*.ind
+*.xmpi
+
+# Ignore PDF and generated files
+# *.pdf
+
+# Ignore backup and swap files
+*.bak
+*.backup
+*.swp
+*.tmp
+*.sav
+*~
+
+# Ignore directories for specific LaTeX tools
+_tex2pdf.*
+/auto/
+
+# Ignore IDE or editor configuration files
+.vscode/
+.idea/
+*.DS_Store
+Thumbs.db
+
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
