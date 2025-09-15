@@ -66,34 +66,43 @@ We implemented two versions of the DNS resolver: Scapy-based and dpkt-based. The
 
 ### Task 2: Traceroute Analysis
 
-To perform the traceroute analysis as documented in our report:
 
-#### Windows (using Command Prompt or PowerShell):
 ```cmd
-tracert www.google.com
+tracert www.google.com    # Windows
+
+traceroute www.google.com   # macOS/Linux
 ```
 
-#### macOS/Linux:
-```bash
-traceroute www.google.com
-```
+#### Steps to run packet capture
 
-#### Packet Capture Commands:
+1. **macOS (using tcpdump):**
+    ```bash
+    # Start packet capture in background
+    sudo tcpdump -i en0 host www.google.com -w TracerouteMac.pcap &
 
-For capturing traceroute traffic with Wireshark or tcpdump:
+    # Run traceroute in another terminal
+    traceroute www.google.com
 
-**Windows (tcpdump equivalent - requires Npcap):**
-```cmd
-# Start Wireshark GUI and filter: icmp
-# Or use command line if available:
-# tcpdump -i <interface> icmp
-```
+    # Stop capture (Ctrl+C the tcpdump process)
+    ```
 
-**macOS/Linux (tcpdump):**
-```bash
-sudo tcpdump -i en0 -w traceroute_capture.pcap &
-traceroute www.google.com
-```
+2. **Windows (using tshark):**
+    ```bash
+    # Start packet capture (replace "5" with your network interface number)
+    tshark -i 5 -f "host www.google.com" -w TracertWin.pcap
+
+    # In another terminal/command prompt, run:
+    tracert www.google.com
+
+    # Stop tshark capture with Ctrl+C
+    ```
+
+
+Open the generated `.pcap` files (`TracerouteMac.pcap` and `TracertWin.pcap`) in Wireshark to analyze:
+- Protocol differences (ICMP vs UDP)
+- TTL progression
+- Response patterns
+- Missing hops analysis
 
 ## Outputs
 
@@ -105,9 +114,8 @@ traceroute www.google.com
     - `Domain name`
     - `Resolved IP address`
 
-**Server Output:**
-- Structured logging to console and log files
-- Optional CSV logging with columns: `time,client_addr,header,domain,resolved_ip,time_slot`
+- All terminal outputs and execution logs are preserved in the `logs/` directory
+
 
 **Sample CSV Output:**
 ```
@@ -117,13 +125,6 @@ Custom header value (HHMMSSID),Domain name,Resolved IP address
 20464702,example.com,192.168.1.13
 ```
 
-### Task 2 Outputs
-
-**Generated Analysis:**
-- Terminal output screenshots from both Windows and macOS
-- Wireshark packet captures showing protocol differences
-- Comparative analysis of ICMP vs UDP traceroute behavior
-- Documentation of missing hops and their causes
 
 ## Project Structure
 
@@ -136,32 +137,7 @@ Custom header value (HHMMSSID),Domain name,Resolved IP address
 ├── rules.json               # Time-based routing rules
 ├── requirements.txt         # Python dependencies
 ├── 3.pcap                   # Input PCAP file
-├── docs/                    # Documentation
-│   ├── tasks.md            # Assignment requirements
-│   └── dns_resolution_rules.md
 ├── latex/                   # LaTeX report source
-│   └── main.tex            # Complete project report
+│   └── main.tex             # Complete project report
 └── logs/                    # Generated log files
 ```
-
-## Dependencies
-
-- Python 3.x
-- scapy
-- dpkt  
-- tqdm (progress bars)
-- Standard library: socket, csv, json, logging, datetime, argparse
-
-## Notes
-
-- The dpkt implementation is significantly faster than Scapy for processing large PCAP files
-- Both implementations produce consistent results, demonstrating correctness
-- All terminal outputs and execution logs are preserved in the `logs/` directory
-- The complete analysis and findings are documented in the LaTeX report: `latex/main.tex`
-- Wireshark captures and screenshots are referenced in the final report
-
-## Repository
-
-**GitHub**: [https://github.com/ShardulJunagade/cn-assignment-1](https://github.com/ShardulJunagade/cn-assignment-1)
-
-All source code, documentation, and generated reports are available in the public repository.
