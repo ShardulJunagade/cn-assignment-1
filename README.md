@@ -4,7 +4,7 @@
 1. Shardul Junagade (23110297)
 2. Rishabh Jogani (23110276)
 
-PCAP file chosen: 3.pcap
+PCAP file chosen: `3.pcap`
 
 > (297 + 276) % 10 = 3
 
@@ -32,24 +32,34 @@ PCAP file chosen: 3.pcap
 
 ## How to Run
 
-1. Start the server (listens on TCP, default 9999). The server loads time-based routing rules from a JSON matching `docs/dns_resolution_rules.md`. If `--rules` is not provided, it defaults to `./docs/rules.json`:
-    ```powershell
-    # use the default rules file path
-    python server.py --host 0.0.0.0 --port 9999
+1) Original Scapy-based implementation:
 
-    # OR explicitly specify a JSON rules file path
-    python server.py --host 0.0.0.0 --port 9999 --rules .\docs\rules.json
-    ```
+    - Start server:
+        ```powershell
+        python server_scapy.py --host 0.0.0.0 --port 53535 --rules .\rules.json
+        ```
 
-2. In a new terminal, run the client with your selected PCAP (e.g., `3.pcap`) and server address:
-    ```powershell
-    python client.py --pcap 3.pcap --server 127.0.0.1 --port 9999
-    ```
+    - Run client:
+        ```powershell
+        python client_scapy.py --pcap .\3.pcap --server-ip 127.0.0.1 --server-port 53535 --out-csv scapy_dns_report.csv
+        ```
+
+2) dpkt-based implementation, which directly parses the PCAP and DNS:
+
+    - Start server:
+        ```powershell
+        python server_dpkt.py --host 0.0.0.0 --port 53535 --rules .\rules.json
+        ```
+
+    - Run client:
+        ```powershell
+        python client_dpkt.py --pcap .\3.pcap --server-ip 127.0.0.1 --server-port 53535 --out-csv dpkt_dns_report.csv
+        ```
 
 ## What the programs do
 
-- Client parses the PCAP, filters DNS query packets, prepends an 8-byte custom header `HHMMSSID`, frames the payload (length + message), and sends to the server.
-- Server extracts `HHMMSSID`, parses hour and sequence ID, applies time-based routing rules to pick an IP from a fixed pool of 15 addresses, and returns a JSON response with the resolved IP.
+- Client parses the PCAP, filters UDP port 53 DNS query packets, prepends an 8-byte custom header `HHMMSSID`, and sends to the server over UDP.
+- Server extracts `HHMMSSID`, parses hour and sequence ID, applies time-based routing rules to pick an IP from a fixed pool of 15 addresses, and returns a text response `header|domain|ip`.
 
 ## Outputs
 
@@ -68,4 +78,4 @@ PCAP file chosen: 3.pcap
     - Afternoon (12:00–19:59): pool indices 5–9
     - Night (20:00–03:59): pool indices 10–14
     - Offset = ID % 5, final index = pool_start + offset
-- The domain from the DNS question is parsed using `dnslib` on the server side.
+- The Scapy version uses Scapy for parsing DNS. The alternative version uses `dpkt` for PCAP/DNS parsing.

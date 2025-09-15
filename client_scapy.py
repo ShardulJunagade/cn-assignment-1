@@ -70,7 +70,7 @@ if __name__ == "__main__":
     parser.add_argument('--pcap', default='./3.pcap', help='Path to input PCAP file with DNS queries')
     parser.add_argument('--server-ip', default='127.0.0.1', help='IP address of the DNS server to query')
     parser.add_argument('--server-port', type=int, default=53535, help='Port of the DNS server to query')
-    parser.add_argument('--out-csv', default='dns_report.csv', help='Path to output CSV file for DNS responses')
+    parser.add_argument('--out-csv', default='scapy_dns_report.csv', help='Path to output CSV file for DNS responses')
     args = parser.parse_args()
 
     run_client(args.pcap, args.server_ip, args.server_port, args.out_csv)

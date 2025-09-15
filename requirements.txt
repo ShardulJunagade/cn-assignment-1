@@ -1,1 +1,3 @@
 scapy==2.6.1
+dpkt==1.9.8
+tqdm
