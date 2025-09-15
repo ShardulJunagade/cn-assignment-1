@@ -1,0 +1,14 @@
+2025-09-15 15:08:44,026 INFO: Found 6 DNS query packets in ./3.pcap
+2025-09-15 15:08:44,029 INFO: Sent query #0 header=15084400 domain=netflix.com
+2025-09-15 15:08:44,030 INFO: Resolved netflix.com -> 192.168.1.6
+2025-09-15 15:08:44,039 INFO: Sent query #1 header=15084401 domain=linkedin.com
+2025-09-15 15:08:44,040 INFO: Resolved linkedin.com -> 192.168.1.7
+2025-09-15 15:08:44,042 INFO: Sent query #2 header=15084402 domain=example.com
+2025-09-15 15:08:44,043 INFO: Resolved example.com -> 192.168.1.8
+2025-09-15 15:08:44,044 INFO: Sent query #3 header=15084403 domain=google.com
+2025-09-15 15:08:44,045 INFO: Resolved google.com -> 192.168.1.9
+2025-09-15 15:08:44,048 INFO: Sent query #4 header=15084404 domain=facebook.com
+2025-09-15 15:08:44,052 INFO: Resolved facebook.com -> 192.168.1.10
+2025-09-15 15:08:44,054 INFO: Sent query #5 header=15084405 domain=amazon.com
+2025-09-15 15:08:44,062 INFO: Resolved amazon.com -> 192.168.1.6
+2025-09-15 15:08:44,087 INFO: Results written to dpkt_dns_report.csv

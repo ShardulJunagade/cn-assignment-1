@@ -1,8 +1,10 @@
-import argparse, socket, time, csv, logging
+import argparse, socket, time, csv, logging, os
 from scapy.all import DNS, PcapReader
 from datetime import datetime
+from logger import setup_logging
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
+
+setup_logging("client_scapy")
 
 def run_client(pcap_path, server_ip, server_port, out_csv):
     dns_pkts = []

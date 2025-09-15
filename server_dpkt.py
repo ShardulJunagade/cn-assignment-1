@@ -2,10 +2,13 @@ import argparse
 import json
 import logging
 import socket
+import os
 
 import dpkt
+from logger import setup_logging
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
+
+setup_logging("server_dpkt")
 
 DEFAULT_IP_POOL = [
     "192.168.1.1", "192.168.1.2", "192.168.1.3", "192.168.1.4", "192.168.1.5",

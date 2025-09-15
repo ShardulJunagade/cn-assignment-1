@@ -1,9 +1,11 @@
-import argparse, csv, logging, socket
+import argparse, csv, logging, socket, os
 from datetime import datetime
 import dpkt
 from tqdm import tqdm
+from logger import setup_logging
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s: %(message)s")
+
+setup_logging("client_dpkt")
 
 
 def iter_dns_queries(pcap_path):
