@@ -1,3 +1,4 @@
-scapy==2.6.1
+colorama==0.4.6
 dpkt==1.9.8
-tqdm
+scapy==2.6.1
+tqdm==4.67.1
